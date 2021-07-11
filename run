@@ -1,0 +1,33 @@
+#!/bin/bash
+
+exitfn () {
+    trap SIGINT              # Restore signal handling for SIGINT
+    echo; echo "Stopping mriregistry now!"
+    killall rmiregistry
+    exit                     #   then exit script.
+}
+
+trap "exitfn" INT
+
+
+# COMPILE .JAVA FILES
+echo "Compiling..."
+javac RMI.java
+
+# START RMIREGISTRY
+echo "Starting registry..."
+rmiregistry &
+sleep 1
+
+# START SERVER ON LOCALHOST (0.0.0.0)
+echo "Starting rmi server..."
+java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file:///home/semikolon/uni/pmt/projekt/ RMI\$BallGameServer &
+sleep 1
+
+# START CLIENT 
+echo "Starting client..."
+java RMI\$BallGameClient "0.0.0.0" "Rudolf" "0"
+
+# TRAP SIGNAL TO STOP RMIREGISTRY
+trap SIGINT
+
