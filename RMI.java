@@ -26,6 +26,9 @@ public interface RMI {
     int getPosY(String name) throws RemoteException;
     int getVelX(String name) throws RemoteException;
     int getVelY(String name) throws RemoteException;
+
+    int getSpeed(String name) throws RemoteException;
+    void setSpeed(String name, int newSpeed) throws RemoteException;
   }
 
   // EXTRA CLASS FOR BALL
@@ -36,7 +39,9 @@ public interface RMI {
     int posY;
     int velX;
     int velY;
-  
+ 
+    int speed = 2;
+
     Ball(String name, Color c) { posX = 0; posY = 0; velX = 0; velY = 0; this.c = c; }
   }
 
@@ -74,6 +79,9 @@ public interface RMI {
     public int getPosY(String name) { return bs.get(name).posY; }
     public int getVelX(String name) { return bs.get(name).velX; }
     public int getVelY(String name) { return bs.get(name).velY; }
+
+    public int getSpeed(String name) { return bs.get(name).speed; }
+    public void setSpeed(String name, int newSpeed) { bs.get(name).speed = newSpeed; }
   }
 
 
@@ -119,6 +127,12 @@ public interface RMI {
     final int width = 800;
     final int height = 600;
 
+    boolean boost = false;
+    boolean upPressed = false;
+    boolean downPressed = false;
+    boolean leftPressed = false;
+    boolean rightPressed = false;
+
     BallGameClient(String host, String n, String c) {
       this.name = n;
 
@@ -159,10 +173,12 @@ public interface RMI {
         public void keyReleased(KeyEvent e) {
           try{
             switch (e.getKeyCode()) {
-              case VK_DOWN:  game.setVel(name,  2,  game.getVelY(name)); break;
-              case VK_UP:    game.setVel(name, -2,  game.getVelY(name)); break;
-              case VK_LEFT:  game.setVel(name,  game.getVelX(name), -2); break;
-              case VK_RIGHT: game.setVel(name,  game.getVelX(name),  2); break;
+              case VK_DOWN:  game.setVel(name, game.getVelX(name),0);  downPressed = false;  break;
+              case VK_UP:    game.setVel(name, game.getVelX(name),0);  upPressed = false;    break;
+              case VK_LEFT:  game.setVel(name, 0, game.getVelY(name)); leftPressed = false;  break;
+              case VK_RIGHT: game.setVel(name, 0, game.getVelY(name)); rightPressed = false; break;
+
+              case VK_X:     game.setSpeed(name, game.getSpeed(name) / 2); boost = false;    break;
             }
           } catch (Exception eKeyReleased) {System.out.println(eKeyReleased);}
         }
@@ -170,10 +186,20 @@ public interface RMI {
         public void keyPressed(KeyEvent e) {
           try {
             switch (e.getKeyCode()) {
-              case VK_DOWN:  game.setVel(name, 0,  game.getVelY(name)); break;
-              case VK_UP:    game.setVel(name, 0,  game.getVelY(name)); break;
-              case VK_LEFT:  game.setVel(name, game.getVelX(name), 0); break;
-              case VK_RIGHT: game.setVel(name, game.getVelX(name), 0); break; 
+              case VK_DOWN:  if(!downPressed) {game.setVel(name, game.getVelX(name), game.getSpeed(name) *  2); 
+                                                downPressed = true; } break;
+
+              case VK_UP:    if(!upPressed)   {game.setVel(name, game.getVelX(name), game.getSpeed(name) * -2); 
+                                                upPressed = true; } break;
+
+              case VK_LEFT:  if(!leftPressed) {game.setVel(name, game.getSpeed(name) * -2, game.getVelY(name)); 
+                                                leftPressed = true; } break;
+
+              case VK_RIGHT: if(!rightPressed){game.setVel(name, game.getSpeed(name) *  2, game.getVelY(name));
+                                                rightPressed = true; } break; 
+
+              case VK_X:     if(!boost)       {game.setSpeed(name, game.getSpeed(name) * 2); 
+                                                boost = true; } break;
             }
 
             // DEBUG
@@ -193,7 +219,7 @@ public interface RMI {
       try {
         for(Ball d : game.getBalls().values()) {
           g.setColor(d.c);
-          g.fillOval(d.posY, d.posX, 10, 10);
+          g.fillOval(d.posX, d.posY, 10, 10);
         }
       } catch (Exception ePaint) {System.out.println(ePaint);}
     }
