@@ -3,9 +3,14 @@
 exitfn () {
     trap SIGINT              # Restore signal handling for SIGINT
     echo; echo "Stopping mriregistry now!"
+    echo "You might need sudo to kill the rmiregistry process"
     killall rmiregistry
     exit                     #   then exit script.
 }
+
+# grab pwd
+PWD=$(pwd)
+echo "Current Working Directory = $PWD"
 
 trap "exitfn" INT
 
@@ -21,7 +26,7 @@ sleep 1
 
 # START SERVER ON LOCALHOST (0.0.0.0)
 echo "Starting rmi server..."
-java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file:///home/semikolon/uni/pmt/projekt/ RMI\$BallGameServer &
+java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file://$PWD RMI\$BallGameServer &
 sleep 1
 
 # START CLIENT 
