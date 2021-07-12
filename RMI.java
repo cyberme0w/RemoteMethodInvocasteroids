@@ -19,28 +19,28 @@ public interface RMI {
     void move(String name) throws RemoteException;
     Map<String, Ball> getBalls() throws RemoteException;
 
-    void setVel(String name, int x, int y) throws RemoteException;
-    void setPos(String name, int x, int y) throws RemoteException;
+    void setVel(String name, double x, double y) throws RemoteException;
+    void setPos(String name, double x, double y) throws RemoteException;
 
-    int getPosX(String name) throws RemoteException;
-    int getPosY(String name) throws RemoteException;
-    int getVelX(String name) throws RemoteException;
-    int getVelY(String name) throws RemoteException;
+    double getPosX(String name) throws RemoteException;
+    double getPosY(String name) throws RemoteException;
+    double getVelX(String name) throws RemoteException;
+    double getVelY(String name) throws RemoteException;
 
-    int getSpeed(String name) throws RemoteException;
-    void setSpeed(String name, int newSpeed) throws RemoteException;
+    double getSpeed(String name) throws RemoteException;
+    void setSpeed(String name, double newSpeed) throws RemoteException;
   }
 
   // EXTRA CLASS FOR BALL
   public class Ball implements Serializable {
     String name;
     Color c = Color.RED;
-    int posX;
-    int posY;
-    int velX;
-    int velY;
+    double posX;
+    double posY;
+    double velX;
+    double velY;
  
-    int speed = 2;
+    double speed = 2;
 
     Ball(String name, Color c) { posX = 0; posY = 0; velX = 0; velY = 0; this.c = c; }
   }
@@ -59,7 +59,7 @@ public interface RMI {
 
     public Map<String, Ball> getBalls() { return bs; }
 
-    public void setVel(String name, int x, int y) {
+    public void setVel(String name, double x, double y) {
       Ball cur = bs.get(name);
       if(cur != null) {
         cur.velX = x;
@@ -67,7 +67,7 @@ public interface RMI {
       }
     }
 
-    public void setPos(String name, int x, int y) {
+    public void setPos(String name, double x, double y) {
       Ball cur = bs.get(name);
       if(cur != null) {
         cur.posX = x;
@@ -75,13 +75,13 @@ public interface RMI {
       }
     }
 
-    public int getPosX(String name) { return bs.get(name).posX; }
-    public int getPosY(String name) { return bs.get(name).posY; }
-    public int getVelX(String name) { return bs.get(name).velX; }
-    public int getVelY(String name) { return bs.get(name).velY; }
+    public double getPosX(String name) { return bs.get(name).posX; }
+    public double getPosY(String name) { return bs.get(name).posY; }
+    public double getVelX(String name) { return bs.get(name).velX; }
+    public double getVelY(String name) { return bs.get(name).velY; }
 
-    public int getSpeed(String name) { return bs.get(name).speed; }
-    public void setSpeed(String name, int newSpeed) { bs.get(name).speed = newSpeed; }
+    public double getSpeed(String name) { return bs.get(name).speed; }
+    public void setSpeed(String name, double newSpeed) { bs.get(name).speed = newSpeed; }
   }
 
 
@@ -175,8 +175,8 @@ public interface RMI {
 
               // Releasing X will halve the speed and current velocity
               case VK_X, VK_J: if(boost) {
-                game.setSpeed(name, game.getSpeed(name) / 2);
-                game.setVel(name, game.getVelX(name) / 2, game.getVelY(name) / 2);
+                game.setSpeed(name, game.getSpeed(name) / 1.5);
+                game.setVel(name, game.getVelX(name) / 1.5, game.getVelY(name) / 1.5);
                 boost = false;
                 break;
               }
@@ -207,8 +207,8 @@ public interface RMI {
               // MOVEMENT: BOOST
               case VK_X, VK_J:
                 if(!boost) {
-                  game.setSpeed(name, game.getSpeed(name) * 2);
-                  game.setVel(name, game.getVelX(name) * 2, game.getVelY(name) * 2);
+                  game.setSpeed(name, game.getSpeed(name) * 1.5);
+                  game.setVel(name, game.getVelX(name) * 1.5, game.getVelY(name) * 1.5);
                   boost = true;
                 } 
                 break;
@@ -224,10 +224,12 @@ public interface RMI {
     public void paintComponent(Graphics g) {
       g.setColor(Color.BLACK);
       g.fillRect(0, 0, width, height);
+      // TODO make some stars n shit
+      
       try {
         for(Ball d : game.getBalls().values()) {
           g.setColor(d.c);
-          g.fillOval(d.posX, d.posY, 25, 25);
+          g.fillOval((int) d.posX, (int) d.posY, 20, 20); // cast to int to avoid problems with double
         }
       } catch (Exception ePaint) {System.out.println(ePaint);}
     }
