@@ -5,6 +5,9 @@ exitfn () {
     echo; echo "Stopping mriregistry now!"
     echo "You might need sudo to kill the rmiregistry process"
     killall rmiregistry
+    echo "Removing generated files"
+    rm RMI\$*
+    rm RMI.class
     exit                     #   then exit script.
 }
 
