@@ -54,7 +54,7 @@ public interface RMI {
 
     public void move(String name) {
       Ball cur = bs.get(name);
-      if(cur != null) {cur.posX += cur.velX; cur.posY += cur.velY;}
+      if(cur != null) {cur.posX += cur.velX * cur.speed; cur.posY += cur.velY * cur.speed;}
     }
 
     public Map<String, Ball> getBalls() { return bs; }
@@ -115,17 +115,11 @@ public interface RMI {
   }
 
   static class BallGameClient extends AnimatedJPanel {
-    int ballSpeedVER = 1;
-    int ballSpeedHOR = 1;
-
-    int ballPosVER = 25;
-    int ballPosHOR = 25;
-
     final String name;
     Color color = Color.RED;
     BallGame game = null;
-    final int width = 800;
-    final int height = 600;
+    final int width = 1200;
+    final int height = 900;
 
     boolean boost = false;
     boolean upPressed = false;
@@ -141,6 +135,7 @@ public interface RMI {
         case "1": color = Color.BLUE; break;
         case "2": color = Color.CYAN; break;
         case "3": color = Color.YELLOW; break;
+        default: color = Color.WHITE; break;
       }
 
       setFocusable(true);
@@ -173,12 +168,18 @@ public interface RMI {
         public void keyReleased(KeyEvent e) {
           try{
             switch (e.getKeyCode()) {
-              case VK_DOWN:  game.setVel(name, game.getVelX(name),0);  downPressed = false;  break;
-              case VK_UP:    game.setVel(name, game.getVelX(name),0);  upPressed = false;    break;
-              case VK_LEFT:  game.setVel(name, 0, game.getVelY(name)); leftPressed = false;  break;
-              case VK_RIGHT: game.setVel(name, 0, game.getVelY(name)); rightPressed = false; break;
+              case VK_DOWN, VK_S: if(downPressed) {game.setVel(name, game.getVelX(name),0);  downPressed = false;  break;}
+              case VK_UP,   VK_W: if(upPressed)   {game.setVel(name, game.getVelX(name),0);  upPressed = false;    break;}
+              case VK_LEFT, VK_A: if(leftPressed) {game.setVel(name, 0, game.getVelY(name)); leftPressed = false;  break;}
+              case VK_RIGHT,VK_D: if(rightPressed){game.setVel(name, 0, game.getVelY(name)); rightPressed = false; break;}
 
-              case VK_X:     game.setSpeed(name, game.getSpeed(name) / 2); boost = false;    break;
+              // Releasing X will halve the speed and current velocity
+              case VK_X, VK_J: if(boost) {
+                game.setSpeed(name, game.getSpeed(name) / 2);
+                game.setVel(name, game.getVelX(name) / 2, game.getVelY(name) / 2);
+                boost = false;
+                break;
+              }
             }
           } catch (Exception eKeyReleased) {System.out.println(eKeyReleased);}
         }
@@ -186,28 +187,35 @@ public interface RMI {
         public void keyPressed(KeyEvent e) {
           try {
             switch (e.getKeyCode()) {
-              case VK_DOWN:  if(!downPressed) {game.setVel(name, game.getVelX(name), game.getSpeed(name) *  2); 
-                                                downPressed = true; } break;
+              // MOVEMENT: DOWN
+              case VK_DOWN, VK_S: 
+                if(!downPressed) {game.setVel(name, game.getVelX(name), game.getSpeed(name));downPressed = true;} break;
+              
+              // MOVEMENT: UP
+              case VK_UP, VK_W: 
+                if(!upPressed)   {game.setVel(name, game.getVelX(name), -game.getSpeed(name));upPressed = true; } break;
+              
+              // MOVEMENT: LEFT
+              case VK_LEFT, VK_A:
+                if(!leftPressed) {game.setVel(name, -game.getSpeed(name), game.getVelY(name));leftPressed = true; } break;
 
-              case VK_UP:    if(!upPressed)   {game.setVel(name, game.getVelX(name), game.getSpeed(name) * -2); 
-                                                upPressed = true; } break;
+              // MOVEMENT: RIGHT
+              case VK_RIGHT, VK_D:
+                if(!rightPressed) {game.setVel(name, game.getSpeed(name), game.getVelY(name));rightPressed = true; } break; 
 
-              case VK_LEFT:  if(!leftPressed) {game.setVel(name, game.getSpeed(name) * -2, game.getVelY(name)); 
-                                                leftPressed = true; } break;
 
-              case VK_RIGHT: if(!rightPressed){game.setVel(name, game.getSpeed(name) *  2, game.getVelY(name));
-                                                rightPressed = true; } break; 
+              // MOVEMENT: BOOST
+              case VK_X, VK_J:
+                if(!boost) {
+                  game.setSpeed(name, game.getSpeed(name) * 2);
+                  game.setVel(name, game.getVelX(name) * 2, game.getVelY(name) * 2);
+                  boost = true;
+                } 
+                break;
 
-              case VK_X:     if(!boost)       {game.setSpeed(name, game.getSpeed(name) * 2); 
-                                                boost = true; } break;
+              // TODO OTHER: SHOOT
+
             }
-
-            // DEBUG
-            System.err.println("\nBall moving down.\nNew values:\n" +
-                               "Ball.posX = " + game.getPosX(name) + "\n" +
-                               "Ball.posY = " + game.getBalls().get(name).posY + "\n" +
-                               "Ball.velX = " + game.getBalls().get(name).velX + "\n" +
-                               "Ball.velY = " + game.getBalls().get(name).velY + "\n\n");
           } catch (Exception eKeyPressed) {System.out.println(eKeyPressed);}
         }
       });
@@ -219,7 +227,7 @@ public interface RMI {
       try {
         for(Ball d : game.getBalls().values()) {
           g.setColor(d.c);
-          g.fillOval(d.posX, d.posY, 10, 10);
+          g.fillOval(d.posX, d.posY, 25, 25);
         }
       } catch (Exception ePaint) {System.out.println(ePaint);}
     }
