@@ -30,21 +30,31 @@ public interface RMI {
     double getSpeed(String name) throws RemoteException;
     void setSpeed(String name, double newSpeed) throws RemoteException;
 
-    void createLaser(String name) throws RemoteException;
+    //void createLaser(String name) throws RemoteException;
+    //Map<String, Laser> getLasers() throws RemoteException;
+
+    //void createMeteor(String name) throws RemoteException;
+    //Map<String, Meteor>(String name) throws RemoteException;
+
   }
 
   // EXTRA CLASS FOR BALL
   public class Ball implements Serializable {
     String name;
-    Color c = Color.RED;
-    double posX;
-    double posY;
-    double velX;
-    double velY;
+    Color color;
+    double posX;  double posY;
+    double velX;  double velY;
  
     double speed = 2;
 
-    Ball(String name, Color c) { posX = 0; posY = 0; velX = 0; velY = 0; this.c = c; }
+    // Spawn the ball in a random position within the middle of the game field
+    double randX = Math.random();
+    double randY = Math.random();
+    Ball(String name, Color c) { 
+      posX = (int) 120 + (int) (randX * 960); 
+      posY = (int)  90 + (int) (randY * 720);
+      velX = 0; velY = 0; color = c; 
+    }
   }
   
   // CLASS FOR LASER SHOTS
@@ -52,11 +62,8 @@ public interface RMI {
     String key;
     Color color;
 
-    double posX;
-    double posY;
-
-    double velX;
-    double velY;
+    double posX;  double posY;
+    double velX;  double velY;
 
     double speed = 8;
 
@@ -66,6 +73,8 @@ public interface RMI {
   // BALL GAME IMPLEMENTATION
   static class BallGameImpl implements BallGame {
     private Map<String, Ball> bs = new HashMap<>();
+    //private Map<String, Laser> ls = new HashMap<>(); // TODO implement lasers
+    //private Map<String, Meteo> ms = new HashMap<>(); // TODO implement meteors
 
     public void createBall(String name, Color c) { bs.put(name, new Ball(name, c)); }
 
@@ -233,7 +242,7 @@ public interface RMI {
                 break;
 
               case VK_SPACE: System.out.println("PRESSING SPACE"); break;
-              // TODO OTHER: SHOOT
+              // TODO: SHOOT
 
             }
           } catch (Exception eKeyPressed) {System.out.println(eKeyPressed);}
@@ -247,10 +256,14 @@ public interface RMI {
       // TODO make some stars n shit
       
       try {
-        for(Ball d : game.getBalls().values()) {
-          g.setColor(d.c);
-          g.fillOval((int) d.posX, (int) d.posY, 20, 20); // cast to int to avoid problems with double
+        for(Ball b : game.getBalls().values()) {
+          g.setColor(b.color);
+          g.fillOval((int) b.posX, (int) b.posY, 20, 20); // cast to int to avoid problems with double
         }
+        //for(Laser l : game.getLasers().values()) {
+        //  l.setColor(Color.RED);
+        //  l.fillOval((int) l.posX, (int) l.posY, 10, 10);
+        //}
       } catch (Exception ePaint) {System.out.println(ePaint);}
     }
 
