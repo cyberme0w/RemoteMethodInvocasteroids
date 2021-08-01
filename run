@@ -6,8 +6,7 @@ exitfn () {
     echo "You might need sudo to kill the rmiregistry process"
     killall rmiregistry
     echo "Removing generated files"
-    rm RMI\$*
-    rm RMI.class
+    rm *.class
     exit                     #   then exit script.
 }
 
@@ -20,22 +19,22 @@ trap "exitfn" INT
 
 # COMPILE .JAVA FILES
 echo "Compiling..."
-javac RMI.java
+javac *.java
 
 # START RMIREGISTRY
 echo "Starting registry..."
 rmiregistry &
 sleep 1
 
-# START SERVER ON LOCALHOST (0.0.0.0)
+# START SERVER
 echo "Starting rmi server..."
-java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file://$PWD RMI\$BallGameServer &
+java -Djava.rmi.server.hostname=192.168.0.9 -Djava.rmi.server.codebase="file:$PWD" AsteroidsServer &
+
 sleep 1
 
 # START CLIENT 
 echo "Starting client..."
-java RMI\$BallGameClient "0.0.0.0" "Rudolf" "0"
+java AsteroidsClient "192.168.0.9" "Rudolf" "2"
 
 # TRAP SIGNAL TO STOP RMIREGISTRY
 trap SIGINT
-
