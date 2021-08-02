@@ -4,42 +4,37 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public interface Asteroids extends Remote {
-  void createShip(String name) throws RemoteException;
-  void moveShip(String name) throws RemoteException;
+  // Create elements
+  void createShip(int id) throws RemoteException;
+  void newLaser(int id) throws RemoteException;
 
-  HashMap<String, Ship> getShips() throws RemoteException;
-  ArrayList<Laser> getLasers() throws RemoteException;
-
-  double getAngle(String name) throws RemoteException;
-  void setAngle(String name, double newAngle) throws RemoteException;
-
-  void setPos(String name, double x, double y) throws RemoteException;
-
-  double getSpeed(String name) throws RemoteException;
-  void setSpeed(String name, double newSpeed) throws RemoteException;
-
-  void setVelX(String id, double x) throws RemoteException;
-  void setVelY(String id, double y) throws RemoteException;
-
-  double getVelX(String id) throws RemoteException;
-  double getVelY(String id) throws RemoteException;
-
-  double getVelXFromAngle(String id) throws RemoteException;
-  double getVelYFromAngle(String id) throws RemoteException;
-
-  void addVelFromAngle(String id) throws RemoteException;
-
-  void newLaser(String id) throws RemoteException;
-
+  // Move stuff around
+  void moveShip(int id) throws RemoteException;
   void moveLaser(int laserIndex) throws RemoteException;
+  void moveRock(int rockIndex) throws RemoteException;
 
+  // Setter
   void setLasers(ArrayList<Laser> newLS) throws RemoteException;
-
-  void moveRock(Rock r) throws RemoteException;
-
-  ArrayList<Rock> getRocks() throws RemoteException;
-
   void setRocks(ArrayList<Rock> newRocks) throws RemoteException;
+  void setPos(int id, double x, double y) throws RemoteException;
+  void setSpeed(int id, double newSpeed) throws RemoteException;
+  void setAngle(int id, double newAngle) throws RemoteException;
+  void setVelX(int id, double x) throws RemoteException;
+  void setVelY(int id, double y) throws RemoteException;
+  void addVelFromAngle(int id) throws RemoteException;
+  void setRockPos(int index, double x, double y) throws RemoteException;
+
+  // Getter
+  HashMap<Integer, Ship> getShips() throws RemoteException;
+  ArrayList<Laser> getLasers() throws RemoteException;
+  ArrayList<Rock> getRocks() throws RemoteException;
+  double getSpeed(int id) throws RemoteException;
+  double getAngle(int id) throws RemoteException;
+  double getVelX(int id) throws RemoteException;
+  double getVelY(int id) throws RemoteException;
+  double getVelXFromAngle(int id) throws RemoteException;
+  double getVelYFromAngle(int id) throws RemoteException;
+
 
   // TODO: make meteors
   //void createMeteor(String name) throws RemoteException;

@@ -2,6 +2,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 
 public class Rock implements Serializable {
+  int id;
   double posX;
   double posY;
   short size;
@@ -10,7 +11,8 @@ public class Rock implements Serializable {
   double velX;
   double velY;
 
-  Rock(HashMap<String, Ship> ships, int width, int height) {
+  Rock(int id, HashMap<Integer, Ship> ships, int width, int height) {
+    this.id = id;
     double rand = Math.random();
 
     size = (short) (3 * Math.random() + 1);
@@ -31,7 +33,7 @@ public class Rock implements Serializable {
       badPos = false;
       for(Ship s : ships.values()) {
         if(s != null) {
-          if(Math.sqrt(s.posX * s.posX - posX * posX + s.posY * s.posY - posY * posY) < 200) {
+          if(Math.sqrt(s.posX * s.posX - posX * posX + s.posY * s.posY - posY * posY) < 100) {
             badPos = true;
             break;
           }

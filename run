@@ -34,7 +34,7 @@ sleep 1
 
 # START CLIENT 
 echo "Starting client..."
-java AsteroidsClient "192.168.0.9" "Rudolf" "2"
+java AsteroidsClient "192.168.0.9" "Rudolf"
 
 # TRAP SIGNAL TO STOP RMIREGISTRY
 trap SIGINT

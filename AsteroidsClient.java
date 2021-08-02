@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import static java.awt.event.KeyEvent.*;
 
 public class AsteroidsClient extends AnimatedJPanel {
-  final String id;
+  final Integer id;
   Asteroids game = null;
   final int width = 1200;
   final int height = 900;
@@ -28,8 +28,8 @@ public class AsteroidsClient extends AnimatedJPanel {
   int rockCountdownMax = 90;
   int rockCountdown = rockCountdownMax;
 
-  AsteroidsClient(String host, String n) {
-    this.id = n;
+  AsteroidsClient(String host) {
+    id = (int) (Math.random() * 100000);
     setFocusable(true);
 
     // Create random array for stars at startup
@@ -112,18 +112,26 @@ public class AsteroidsClient extends AnimatedJPanel {
           // Update Rock countdown / create rock
           if(rockCountdown == 0) {
             var newRocks = game.getRocks();
-            newRocks.add(new Rock(game.getShips(), width, height));
+            newRocks.add(new Rock(this.id, game.getShips(), width, height));
             game.setRocks(newRocks);
             rockCountdown = rockCountdownMax;
           }
           else {rockCountdown--;}
 
-          // TODO: Update Meteor Positions
-          for(Rock r : game.getRocks()) {
-            game.moveRock(r);
+          // Update Rock Positions and loop around the border
+          var rs = game.getRocks();
+          for(Rock r : rs) {
+            if(r != null) {
+              int index = rs.indexOf(r);
+              // loop
+              if(r.posX > width + 20)  game.setRockPos(index,-20.0, r.posY);
+              if(r.posX < -20) game.setRockPos(index, width + 20, r.posY);
+              if(r.posY > height + 20) game.setRockPos(index, r.posX,   -20);
+              if(r.posY < -20) game.setRockPos(index, r.posX,   height + 20);
+              // move
+              if(r.id == this.id) game.moveRock(rs.indexOf(r));
+            }
           }
-
-          // TODO: Loop Meteors around the borders
         }
       } catch (Exception eTimer) { eTimer.printStackTrace(); }
 
@@ -187,7 +195,7 @@ public class AsteroidsClient extends AnimatedJPanel {
       // Paint ships
       for (Ship cur : game.getShips().values()) {
         g.setColor(Color.GREEN);
-        if(cur.id.equals(id)) g.setColor(Color.CYAN);
+        if(cur.id == this.id) g.setColor(Color.CYAN);
 
         double cos = Math.cos(Math.toRadians(cur.angle));
         double sin = Math.sin(Math.toRadians(cur.angle));
@@ -206,7 +214,7 @@ public class AsteroidsClient extends AnimatedJPanel {
                             (int) (cur.posY + 20 * sin + 15 * cos)}, // Right
                       3);
 
-        if(cur.id.equals(id)) {
+        if(cur.id == this.id) {
           // UI Overlay
           String uiPoints = "Points: " + cur.points;
           String uiAngle = "Angle: " + cur.angle;
@@ -245,7 +253,7 @@ public class AsteroidsClient extends AnimatedJPanel {
 
   public static void main(String[] args) {
     JFrame f = new JFrame();
-    f.add(new AsteroidsClient(args[0], args[1]));
+    f.add(new AsteroidsClient(args[0]));
     f.pack();
     f.setVisible(true);
   }

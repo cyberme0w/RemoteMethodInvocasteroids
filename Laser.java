@@ -1,9 +1,8 @@
-import java.awt.*;
 import java.io.Serializable;
 
 // CLASS FOR LASER SHOTS
 public class Laser implements Serializable {
-  String id;
+  Integer id;
 
   double posX;
   double posY;
@@ -12,7 +11,7 @@ public class Laser implements Serializable {
 
   double speed = 20;
 
-  Laser(String id, double pX, double pY, double angle) {
+  Laser(Integer id, double pX, double pY, double angle) {
     this.id = id;
     posX = pX;
     posY = pY;

@@ -4,7 +4,7 @@ import java.io.Serializable;
 public class Ship implements Serializable {
   public int points;
   boolean alive = false;
-  String id;
+  int id;
 
   double posX;
   double posY;
@@ -20,7 +20,7 @@ public class Ship implements Serializable {
   double maxSpeed = 16;
 
   // Constructor
-  Ship(String id) {
+  Ship(int id) {
     this.id = id;
     this.points = 0;
 
