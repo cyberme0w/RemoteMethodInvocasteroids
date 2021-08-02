@@ -5,12 +5,12 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.rmi.registry.LocateRegistry;
+import java.util.ArrayList;
 
 import static java.awt.event.KeyEvent.*;
 
 public class AsteroidsClient extends AnimatedJPanel {
   final String id;
-  Color color = Color.BLUE;
   Asteroids game = null;
   final int width = 1200;
   final int height = 900;
@@ -25,6 +25,9 @@ public class AsteroidsClient extends AnimatedJPanel {
   double[] r1 = new double[40];
   double[] r2 = new double[40];
 
+  int rockCountdownMax = 90;
+  int rockCountdown = rockCountdownMax;
+
   AsteroidsClient(String host, String n) {
     this.id = n;
     setFocusable(true);
@@ -32,6 +35,7 @@ public class AsteroidsClient extends AnimatedJPanel {
     // Create random array for stars at startup
     for(int i = 0; i < 40; i++) { r1[i] = Math.random(); r2[i] = Math.random(); }
 
+    // Connect client to server
     try {
       var registry = LocateRegistry.getRegistry(host);
       game = (Asteroids) registry.lookup("asteroids");
@@ -43,13 +47,15 @@ public class AsteroidsClient extends AnimatedJPanel {
         Ship cur = null;
         if (game != null) cur = game.getShips().get(id);
         if (cur != null) {
+
           // Acceleration
           if(upPressed && cur.speed < cur.regSpeed) {
-            cur.speed += 0.05;
+            game.addVelFromAngle(id);
+            game.setSpeed(id, game.getSpeed(id) + 0.1);
           }
 
           if(!upPressed && cur.speed > 0) {
-            cur.speed -= 0.05;
+            game.setSpeed(id, game.getSpeed(id) - 0.1);
           }
 
           // Angle
@@ -59,10 +65,10 @@ public class AsteroidsClient extends AnimatedJPanel {
 
           // Boost
           if(boostPressed && cur.speed < cur.maxSpeed) {
-            game.setSpeed(id, game.getSpeed(id) + 0.05);
+            game.setSpeed(id, game.getSpeed(id) + 0.2);
           }
 
-          // Breaking
+          // Slow down from boost
           if(!boostPressed && cur.speed > cur.regSpeed) {
             game.setSpeed(id, game.getSpeed(id) - 0.1);
           }
@@ -81,16 +87,42 @@ public class AsteroidsClient extends AnimatedJPanel {
 
           // Loop around the borders
           if(cur.posX > width + 20)  game.setPos(id,-20.0, cur.posY);
-          if(cur.posX < -20)         game.setPos(id, width + 20, cur.posY);
+          if(cur.posX < -20) game.setPos(id, width + 20, cur.posY);
           if(cur.posY > height + 20) game.setPos(id, cur.posX,   -20);
-          if(cur.posY < -20)         game.setPos(id, cur.posX,   height + 20);
+          if(cur.posY < -20) game.setPos(id, cur.posX,   height + 20);
 
-          // TODO: Update Laser Positions
-          for(Laser l : game.getLasers()) {
-            if(l.id.equals(id)) game.moveLaser(l);
+          // Move lasers
+          var ls = game.getLasers();
+          for(Laser l : ls) {
+            if(l != null && l.id.equals(id)) {
+              game.moveLaser(ls.indexOf(l));
+            }
           }
 
+          // Remove old, out-of-bounds lasers
+          if(ls.size() > 200) {
+            var newLS = new ArrayList<Laser>();
+            for(Laser l : ls) {
+              if(l.posX < 0 || l.posX > width || l.posY < 0 || l.posY > height) continue;
+              newLS.add(l);
+            }
+            game.setLasers(newLS);
+          }
+
+          // Update Rock countdown / create rock
+          if(rockCountdown == 0) {
+            var newRocks = game.getRocks();
+            newRocks.add(new Rock(game.getShips(), width, height));
+            game.setRocks(newRocks);
+            rockCountdown = rockCountdownMax;
+          }
+          else {rockCountdown--;}
+
           // TODO: Update Meteor Positions
+          for(Rock r : game.getRocks()) {
+            game.moveRock(r);
+          }
+
           // TODO: Loop Meteors around the borders
         }
       } catch (Exception eTimer) { eTimer.printStackTrace(); }
@@ -104,7 +136,7 @@ public class AsteroidsClient extends AnimatedJPanel {
     addMouseListener(new MouseAdapter() {
       public void mouseClicked(MouseEvent e) {
         try {
-          game.createShip(id, color);
+          game.createShip(id);
         } catch (Exception eMouse) { eMouse.printStackTrace(); }
       }
     });
@@ -140,21 +172,16 @@ public class AsteroidsClient extends AnimatedJPanel {
     });
   }
 
-  private void moveLaser(Laser l) {
-    l.posX += l.velX;
-    l.posY += l.velY;
-  }
-
   public void paintComponent(Graphics g) {
+    // Paint black backdrop
     g.setColor(Color.BLACK);
     g.fillRect(0, 0, width, height);
 
+    // Paint random stars in background
     for(int i = 0; i < 40; i++) {
       g.setColor(Color.WHITE);
       g.fillOval((int) (r1[i] * width), (int) (r2[i] * height), 2, 2);
     }
-
-    // TODO make some stars n shit
 
     try {
       // Paint ships
@@ -162,31 +189,56 @@ public class AsteroidsClient extends AnimatedJPanel {
         g.setColor(Color.GREEN);
         if(cur.id.equals(id)) g.setColor(Color.CYAN);
 
-        g.fillOval((int) cur.posX - 5, (int) cur.posY - 5, 10, 10); // cast to int to avoid problems with double
+        double cos = Math.cos(Math.toRadians(cur.angle));
+        double sin = Math.sin(Math.toRadians(cur.angle));
+
+        // Center circle in Ship (center of ship)
+        g.fillOval((int) cur.posX - 5, (int) cur.posY - 5, 10, 10);
+
+        // Directional triangle around ship
         g.drawPolygon(new int[] {
-                            (int) (cur.posX + 20 * cur.velX), // Front
-                            (int) (cur.posX - 20 * cur.velX + 15 * Math.sin(Math.toRadians(cur.angle))), // Left
-                            (int) (cur.posX - 20 * cur.velX - 15 * Math.sin(Math.toRadians(cur.angle)))}, // Right
+                            (int) (cur.posX + 20 * cos), // Front
+                            (int) (cur.posX - 20 * cos - 15 * sin), // Left
+                            (int) (cur.posX - 20 * cos + 15 * sin)}, // Right
                       new int[] {
-                            (int) (cur.posY + 20 * cur.velY), // Front
-                            (int) (cur.posY - 20 * cur.velY + 15 * Math.cos(Math.toRadians(cur.angle))), // Left
-                            (int) (cur.posY - 20 * cur.velY - 15 * Math.cos(Math.toRadians(cur.angle)))}, // Right
+                            (int) (cur.posY - 20 * sin), // Front
+                            (int) (cur.posY + 20 * sin - 15 * cos), // Left
+                            (int) (cur.posY + 20 * sin + 15 * cos)}, // Right
                       3);
 
-        // UI Overlay
-        String uiPoints = "Points: " + cur.points;
-        String uiAngle = "Angle: " + cur.angle;
-        String uiVel = "Vel(x,y): " + cur.velX + ":" + cur.velY;
+        if(cur.id.equals(id)) {
+          // UI Overlay
+          String uiPoints = "Points: " + cur.points;
+          String uiAngle = "Angle: " + cur.angle;
+          String uiVel = "Vel(x,y): " + cur.velX + ":" + cur.velY;
+          String uiSpeed = "Speed: " + cur.speed;
+          String uiLaser = "Laser(waitTime): " + cur.waitLaser;
+          String uiLaserCount = "Laser(count): " + game.getLasers().size();
+          String uiRockCount = "Rock(count): " + game.getRocks().size();
+          String uiRockCD = "Rock(cd): " + (rockCountdownMax - rockCountdown) + "/" + rockCountdownMax;
 
-        g.setColor(Color.WHITE);
-        g.drawChars(uiPoints.toCharArray(), 0, uiPoints.length(), 100, 100);
-        g.drawChars(uiAngle.toCharArray(), 0, uiAngle.length(), 100, 120);
-        g.drawChars(uiVel.toCharArray(), 0, uiVel.length(), 100, 140);
+          g.setColor(Color.WHITE);
+          g.drawChars(uiPoints.toCharArray(), 0, uiPoints.length(), 100, 100);
+          g.drawChars(uiAngle.toCharArray(), 0, uiAngle.length(), 100, 120);
+          g.drawChars(uiVel.toCharArray(), 0, uiVel.length(), 100, 140);
+          g.drawChars(uiSpeed.toCharArray(), 0, uiSpeed.length(), 100, 160);
+          g.drawChars(uiLaser.toCharArray(), 0, uiLaser.length(), 100, 180);
+          g.drawChars(uiLaserCount.toCharArray(), 0, uiLaserCount.length(), 100, 200);
+          g.drawChars(uiRockCount.toCharArray(), 0, uiRockCount.length(), 100, 220);
+          g.drawChars(uiRockCD.toCharArray(), 0, uiRockCD.length(), 100, 240);
+        }
       }
 
+      // Paint Lasers
       for(Laser l : game.getLasers()) {
-        g.setColor(l.color);
-        g.fillOval((int) l.posX, (int) l.posY, 10, 10);
+        g.setColor(Color.RED);
+        g.fillOval((int) l.posX, (int) l.posY, 5, 5);
+      }
+
+      // Paint Rocks
+      for(Rock r : game.getRocks()) {
+        g.setColor(Color.WHITE);
+        g.fillOval((int) r.posX, (int) r.posY, (int) r.radius, (int) r.radius);
       }
     } catch (Exception ePaint) { ePaint.printStackTrace(); }
   }
