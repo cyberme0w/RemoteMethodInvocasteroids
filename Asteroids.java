@@ -35,6 +35,9 @@ public interface Asteroids extends Remote {
   double getVelXFromAngle(int id) throws RemoteException;
   double getVelYFromAngle(int id) throws RemoteException;
 
+  void damageRock(int index, int shipID) throws RemoteException;
+
+  void setLaserCountdown(int id, int i) throws RemoteException;
 
   // TODO: make meteors
   //void createMeteor(String name) throws RemoteException;

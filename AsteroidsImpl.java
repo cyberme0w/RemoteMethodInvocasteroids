@@ -27,8 +27,9 @@ public class AsteroidsImpl implements Asteroids {
 
   public void moveRock(int rockIndex) {
     Rock rock = rocks.get(rockIndex);
-    rock.posX += (25 - 5 * rock.size) * rock.velX;
-    rock.posY += (25 - 5 * rock.size) * rock.velY;
+    // max speed = 16, min speed = 4
+    rock.posX += (20 - 4 * rock.size) * rock.velX;
+    rock.posY += (20 - 5 * rock.size) * rock.velY;
   }
 
   public ArrayList<Rock> getRocks() {
@@ -79,6 +80,23 @@ public class AsteroidsImpl implements Asteroids {
 
   public double getVelXFromAngle(int id) {return Math.cos(Math.toRadians(ships.get(id).angle));}
   public double getVelYFromAngle(int id) {return Math.sin(Math.toRadians(ships.get(id).angle));}
+
+  public void damageRock(int index, int shipID) {
+    Ship ship = ships.get(shipID);
+    var rock = rocks.get(index);
+
+    switch(rock.size) {
+      case 1 -> { ship.points += 50; rock.size = 0; } // prime rock for removal
+      case 2 -> { ship.points += 25; rock.size--; rock.radius = rock.size * 20 + rock.size * 10 * Math.random(); }
+      case 3 -> { ship.points += 15; rock.size--; rock.radius = rock.size * 20 + rock.size * 10 * Math.random(); }
+      case 4 -> { ship.points += 10; rock.size--; rock.radius = rock.size * 20 + rock.size * 10 * Math.random(); }
+    }
+  }
+
+  public void setLaserCountdown(int id, int laserCD) {
+    Ship cur = ships.get(id);
+    cur.waitLaser = laserCD;
+  }
 
   public ArrayList<Laser> getLasers() { return lasers; }
 

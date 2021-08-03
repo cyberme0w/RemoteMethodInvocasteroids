@@ -12,8 +12,9 @@ import static java.awt.event.KeyEvent.*;
 public class AsteroidsClient extends AnimatedJPanel {
   final Integer id;
   Asteroids game = null;
-  final int width = 1200;
-  final int height = 900;
+  final int SCREEN_WIDTH = 1200;
+  final int SCREEN_HEIGHT = 900;
+  final int MAX_ROCKS = 50;
 
   boolean boostPressed = false;
   boolean upPressed = false;
@@ -21,6 +22,9 @@ public class AsteroidsClient extends AnimatedJPanel {
   boolean leftPressed = false;
   boolean rightPressed = false;
   boolean spacePressed = false;
+
+  int mouseX;
+  int mouseY;
 
   double[] r1 = new double[40];
   double[] r2 = new double[40];
@@ -49,22 +53,27 @@ public class AsteroidsClient extends AnimatedJPanel {
         if (cur != null) {
 
           // Acceleration
-          if(upPressed && cur.speed < cur.regSpeed) {
+          if(upPressed) {
             game.addVelFromAngle(id);
-            game.setSpeed(id, game.getSpeed(id) + 0.1);
+            if(cur.speed < cur.regSpeed) game.setSpeed(id, game.getSpeed(id) + 0.1);
           }
 
           if(!upPressed && cur.speed > 0) {
-            game.setSpeed(id, game.getSpeed(id) - 0.1);
+            game.setSpeed(id, game.getSpeed(id) - 0.05);
+          }
+
+          if(downPressed && cur.speed > 0) {
+            game.setSpeed(id, game.getSpeed(id) - 0.2);
           }
 
           // Angle
           // TODO: Change to momentum based movement (without setAngle, since we don't want to immediately change vel)
-          if(leftPressed) game.setAngle(id, (game.getAngle(id) + 5) % 360);
-          if(rightPressed) game.setAngle(id, (game.getAngle(id) - 5) % 360);
+          if(leftPressed) game.setAngle(id, (game.getAngle(id) + 10) % 360);
+          if(rightPressed) game.setAngle(id, (game.getAngle(id) - 10) % 360);
 
           // Boost
           if(boostPressed && cur.speed < cur.maxSpeed) {
+            game.addVelFromAngle(id);
             game.setSpeed(id, game.getSpeed(id) + 0.2);
           }
 
@@ -75,61 +84,89 @@ public class AsteroidsClient extends AnimatedJPanel {
 
           // Shooting
           if(spacePressed && cur.waitLaser == 0) {
-            cur.waitLaser = cur.timerLaser;
+            game.setLaserCountdown(id, cur.timerLaser);
             game.newLaser(id);
           }
 
           // Countdown Laser Timer
-          if(cur.waitLaser > 0) cur.waitLaser--;
+          if(cur.waitLaser > 0) game.setLaserCountdown(id, cur.waitLaser - 1);
+
 
           // Update positions
           game.moveShip(id);
 
           // Loop around the borders
-          if(cur.posX > width + 20)  game.setPos(id,-20.0, cur.posY);
-          if(cur.posX < -20) game.setPos(id, width + 20, cur.posY);
-          if(cur.posY > height + 20) game.setPos(id, cur.posX,   -20);
-          if(cur.posY < -20) game.setPos(id, cur.posX,   height + 20);
+          if(cur.posX > SCREEN_WIDTH + 20)  game.setPos(id,-20.0, cur.posY);
+          if(cur.posX < -20) game.setPos(id, SCREEN_WIDTH + 20, cur.posY);
+          if(cur.posY > SCREEN_HEIGHT + 20) game.setPos(id, cur.posX,   -20);
+          if(cur.posY < -20) game.setPos(id, cur.posX, SCREEN_HEIGHT + 20);
 
           // Move lasers
           var ls = game.getLasers();
           for(Laser l : ls) {
-            if(l != null && l.id.equals(id)) {
+            if(l != null && l.id == id) {
               game.moveLaser(ls.indexOf(l));
             }
           }
 
+          // Check laser-rock collisions and remove destroyed rocks
+          // only check the client's lasers, but check collisions with all rocks
+          for(Laser l : ls) {
+            if(l.id == id) {
+              var rocks = game.getRocks();
+              for(Rock r : rocks) {
+                if(Math.abs(Math.sqrt(l.posX * l.posX - r.posX * r.posX + l.posY * l.posY + r.posY * r.posY)) < r.radius) {
+                  game.damageRock(rocks.indexOf(r), id);
+                  System.out.println("Laser touched rock!");
+                }
+              }
+            }
+          }
+
+          // Check player-rock collisions
+          for(Rock r : game.getRocks()) {
+            if(Math.hypot((cur.posX - r.posX), (cur.posY - r.posY)) < r.radius) {
+            //if(Math.sqrt(cur.posX * cur.posX - r.posX * r.posX + cur.posY * cur.posY + r.posY * r.posY) < r.radius) {
+              //game.damageShip(cur);
+              System.out.println("Player touched rock!");
+            }
+          }
+
           // Remove old, out-of-bounds lasers
-          if(ls.size() > 200) {
+          // TODO: this needs improvement, not really nice to always redo the list
+          if(ls.size() > 100) {
             var newLS = new ArrayList<Laser>();
             for(Laser l : ls) {
-              if(l.posX < 0 || l.posX > width || l.posY < 0 || l.posY > height) continue;
+              if(l.posX < 0 || l.posX > SCREEN_WIDTH || l.posY < 0 || l.posY > SCREEN_HEIGHT) continue;
               newLS.add(l);
             }
             game.setLasers(newLS);
           }
 
           // Update Rock countdown / create rock
-          if(rockCountdown == 0) {
-            var newRocks = game.getRocks();
-            newRocks.add(new Rock(this.id, game.getShips(), width, height));
-            game.setRocks(newRocks);
+          var newRocks = new ArrayList<Rock>();
+          for(Rock r : game.getRocks()) if(r.size > 0) newRocks.add(r);
+          if(rockCountdown == 0 && game.getRocks().size() < MAX_ROCKS) {
+            newRocks.add(new Rock(this.id, game.getShips(), SCREEN_WIDTH, SCREEN_HEIGHT));
             rockCountdown = rockCountdownMax;
           }
-          else {rockCountdown--;}
+
+          game.setRocks(newRocks);
+          rockCountdown--;
 
           // Update Rock Positions and loop around the border
           var rs = game.getRocks();
           for(Rock r : rs) {
-            if(r != null) {
+            // Move the rock and if needed loop around the screen
+            if(r.id == id) {
               int index = rs.indexOf(r);
               // loop
-              if(r.posX > width + 20)  game.setRockPos(index,-20.0, r.posY);
-              if(r.posX < -20) game.setRockPos(index, width + 20, r.posY);
-              if(r.posY > height + 20) game.setRockPos(index, r.posX,   -20);
-              if(r.posY < -20) game.setRockPos(index, r.posX,   height + 20);
+              if(r.posX + r.radius > SCREEN_WIDTH + 40)       game.setRockPos(index,-40, r.posY);
+              else if(r.posX + r.radius < -40)                game.setRockPos(index, SCREEN_WIDTH + 40, r.posY);
+              else if(r.posY + r.radius > SCREEN_HEIGHT + 40) game.setRockPos(index, r.posX,   -40);
+              else if(r.posY + r.radius < -40)                game.setRockPos(index, r.posX, SCREEN_HEIGHT + 40);
               // move
-              if(r.id == this.id) game.moveRock(rs.indexOf(r));
+              else game.moveRock(rs.indexOf(r));
             }
           }
         }
@@ -142,6 +179,13 @@ public class AsteroidsClient extends AnimatedJPanel {
     t.start();
 
     addMouseListener(new MouseAdapter() {
+      public void mouseMoved(MouseEvent e) {
+        System.out.println("EVENT x: " + e.getX() + " y: " + e.getY());
+        System.out.println("VARS  x: " + mouseX + " y: " + mouseY);
+        System.out.println();
+        mouseX = e.getX();
+        mouseY = e.getY();
+      }
       public void mouseClicked(MouseEvent e) {
         try {
           game.createShip(id);
@@ -180,15 +224,18 @@ public class AsteroidsClient extends AnimatedJPanel {
     });
   }
 
+
+
+
   public void paintComponent(Graphics g) {
     // Paint black backdrop
     g.setColor(Color.BLACK);
-    g.fillRect(0, 0, width, height);
+    g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Paint random stars in background
     for(int i = 0; i < 40; i++) {
       g.setColor(Color.WHITE);
-      g.fillOval((int) (r1[i] * width), (int) (r2[i] * height), 2, 2);
+      g.fillOval((int) (r1[i] * SCREEN_WIDTH), (int) (r2[i] * SCREEN_HEIGHT), 2, 2);
     }
 
     try {
@@ -222,8 +269,9 @@ public class AsteroidsClient extends AnimatedJPanel {
           String uiSpeed = "Speed: " + cur.speed;
           String uiLaser = "Laser(waitTime): " + cur.waitLaser;
           String uiLaserCount = "Laser(count): " + game.getLasers().size();
-          String uiRockCount = "Rock(count): " + game.getRocks().size();
+          String uiRockCount = "Rock(count): " + game.getRocks().size() + "/" + MAX_ROCKS;
           String uiRockCD = "Rock(cd): " + (rockCountdownMax - rockCountdown) + "/" + rockCountdownMax;
+          String uiMousePos = "Mouse(x,y): " + mouseX + ":" + mouseY;
 
           g.setColor(Color.WHITE);
           g.drawChars(uiPoints.toCharArray(), 0, uiPoints.length(), 100, 100);
@@ -234,19 +282,32 @@ public class AsteroidsClient extends AnimatedJPanel {
           g.drawChars(uiLaserCount.toCharArray(), 0, uiLaserCount.length(), 100, 200);
           g.drawChars(uiRockCount.toCharArray(), 0, uiRockCount.length(), 100, 220);
           g.drawChars(uiRockCD.toCharArray(), 0, uiRockCD.length(), 100, 240);
+          g.drawChars(uiMousePos.toCharArray(), 0, uiMousePos.length(), 100, 260);
         }
       }
 
       // Paint Lasers
       for(Laser l : game.getLasers()) {
+        ((Graphics2D) g).setStroke(new BasicStroke(3));
+
         g.setColor(Color.RED);
         g.fillOval((int) l.posX, (int) l.posY, 5, 5);
+//        g.drawPolygon(new int[] {
+//                        (int) (l.posX),
+//                        (int) (l.posX + l.velX)},
+//                      new int[] {
+//                        (int) (l.posY),
+//                        (int) (l.posY + l.velY)},
+//                    3);
       }
 
       // Paint Rocks
       for(Rock r : game.getRocks()) {
         g.setColor(Color.WHITE);
-        g.fillOval((int) r.posX, (int) r.posY, (int) r.radius, (int) r.radius);
+        g.fillOval((int) (r.posX - r.radius),
+                   (int) (r.posY - r.radius),
+                   (int) r.radius,
+                   (int) r.radius);
       }
     } catch (Exception ePaint) { ePaint.printStackTrace(); }
   }

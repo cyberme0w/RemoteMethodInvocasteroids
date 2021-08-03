@@ -13,7 +13,7 @@ public class Ship implements Serializable {
   double angle = 0;
 
   int waitLaser = 0;
-  int timerLaser = 30;
+  int timerLaser = 5;
 
   double speed = 0;
   double regSpeed = 8;

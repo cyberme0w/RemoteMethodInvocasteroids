@@ -2,7 +2,7 @@ import java.io.Serializable;
 
 // CLASS FOR LASER SHOTS
 public class Laser implements Serializable {
-  Integer id;
+  int id;
 
   double posX;
   double posY;
