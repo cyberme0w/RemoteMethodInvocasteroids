@@ -313,8 +313,11 @@ public class AsteroidsClient extends AnimatedJPanel {
   }
 
   public static void main(String[] args) {
+    var gameClient = new AsteroidsClient(args[0]);
     JFrame f = new JFrame();
-    f.add(new AsteroidsClient(args[0]));
+    f.add(gameClient);
+    f.setMinimumSize(new Dimension(gameClient.SCREEN_WIDTH, gameClient.SCREEN_HEIGHT));
+    f.setMaximumSize(new Dimension(gameClient.SCREEN_WIDTH, gameClient.SCREEN_HEIGHT));
     f.pack();
     f.setVisible(true);
   }
