@@ -3,9 +3,15 @@
 exitfn () {
     trap SIGINT              # Restore signal handling for SIGINT
     echo; echo "Trying to kill processes..."
-    kill $pidCLIENT $pidSERVER $pidRMI
+    echo "Killing client..."
+    kill $pidCLIENT
+    echo "Killing server..."
+    kill $pidSERVER
+    echo "Killing registry..."
+    kill $pidRMI
     echo "Removing generated files"
     rm *.class
+    echo "Done! Have a nice day ;)"
     exit                     #   then exit script.
 }
 
@@ -15,30 +21,32 @@ echo "Current Working Directory = $PWD"
 
 trap "exitfn" INT
 
-
 # COMPILE .JAVA FILES
 echo "Compiling..."
 javac *.java
 
 # START RMIREGISTRY
 echo "Starting registry..."
-eval "rmiregistry &"
+rmiregistry &
 pidRMI=$!
 echo "Started registry with PID $pidRMI"
-sleep 2
+sleep 1
 
 # START SERVER
 echo "Starting server..."
-eval "java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file://$PWD AsteroidsServer &"
+java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file://$PWD AsteroidsServer &
 pidSERVER=$!
 echo "Started server with PID $pidSERVER"
-sleep 2
+sleep 1
 
 # START CLIENT 
 echo "Starting client..."
-eval "java AsteroidsClient 0.0.0.0 some_user"
+java AsteroidsClient 0.0.0.0 some_user &
 pidCLIENT=$!
+echo "Started client with PID $pidCLIENT"
 
+sleep 10000
 
 # TRAP SIGNAL TO STOP RMIREGISTRY
 trap SIGINT
+
