@@ -2,9 +2,8 @@
 
 exitfn () {
     trap SIGINT              # Restore signal handling for SIGINT
-    echo; echo "Stopping mriregistry now!"
-    echo "You might need sudo to kill the rmiregistry process"
-    killall rmiregistry
+    echo; echo "Trying to kill processes..."
+    #kill $pidCLIENT $pidSERVER $pidRMI
     echo "Removing generated files"
     rm *.class
     exit                     #   then exit script.
@@ -23,18 +22,23 @@ javac *.java
 
 # START RMIREGISTRY
 echo "Starting registry..."
-rmiregistry &
-sleep 1
+eval "rmiregistry &"
+pidRMI=$!
+echo "Started registry with PID $pidRMI"
+sleep 2
 
 # START SERVER
-echo "Starting rmi server..."
-java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase="file:$PWD" AsteroidsServer &
-
-sleep 1
+echo "Starting server..."
+eval "java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase=file://$PWD AsteroidsServer &"
+pidSERVER=$!
+echo "Started server with PID $pidSERVER"
+sleep 2
 
 # START CLIENT 
 echo "Starting client..."
-java AsteroidsClient "0.0.0.0" "user1"
+eval "java AsteroidsClient 0.0.0.0 some_user"
+pidCLIENT=$!
+
 
 # TRAP SIGNAL TO STOP RMIREGISTRY
 trap SIGINT
