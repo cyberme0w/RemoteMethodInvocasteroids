@@ -343,7 +343,7 @@ public class AsteroidsClient extends AnimatedJPanel {
       }
 
       // Paint Waiting for Players to be ready screen
-      if(!allReady) {
+      if(ship != null && !allReady) {
         g.setColor(Color.WHITE);
         if(!game.getShips().get(id).ready) g.drawString("Press R when you are ready!", 500, 400);
         else g.drawString("Waiting for all players to be ready...", 500, 400);

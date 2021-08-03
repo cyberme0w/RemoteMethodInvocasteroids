@@ -3,7 +3,7 @@
 exitfn () {
     trap SIGINT              # Restore signal handling for SIGINT
     echo; echo "Trying to kill processes..."
-    #kill $pidCLIENT $pidSERVER $pidRMI
+    kill $pidCLIENT $pidSERVER $pidRMI
     echo "Removing generated files"
     rm *.class
     exit                     #   then exit script.
