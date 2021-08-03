@@ -8,8 +8,8 @@ public class AsteroidsImpl implements Asteroids {
   private ArrayList<Laser> lasers = new ArrayList<>();
   private ArrayList<Rock> rocks = new ArrayList<>();
 
-  public void createShip(int id) {
-    ships.put(id, new Ship(id));
+  public void createShip(int id, String name) {
+    ships.put(id, new Ship(id, name));
   }
 
   public void newLaser(int id) {
@@ -96,6 +96,42 @@ public class AsteroidsImpl implements Asteroids {
   public void setLaserCountdown(int id, int laserCD) {
     Ship cur = ships.get(id);
     cur.waitLaser = laserCD;
+  }
+
+  public void killShip(int id) {
+    Ship ship = ships.get(id);
+    if(ship != null) {
+      ship.alive = false;
+    }
+  }
+
+  public void resetShip(int id, String name) {
+    Ship ship = ships.get(id);
+    if(ship == null) { createShip(id, name); }
+    else {
+      ship = new Ship(id, name);
+      ships.put(id, ship);
+    }
+  }
+
+  public void removeLaser(int index) {
+    Laser laser = lasers.get(index);
+    laser.posX = 10000;
+    laser.posY = 10000;
+  }
+
+  public void reset() {
+    for(Ship s : ships.values()) {
+      resetShip(s.id, s.name);
+    }
+    var newRocks = new ArrayList<Rock>();
+    var newLasers = new ArrayList<Laser>();
+    rocks = newRocks;
+    lasers = newLasers;
+  }
+
+  public void setReady(int shipID, boolean state) {
+    ships.get(shipID).ready = state;
   }
 
   public ArrayList<Laser> getLasers() { return lasers; }

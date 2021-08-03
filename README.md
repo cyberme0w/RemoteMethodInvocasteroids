@@ -2,7 +2,7 @@
 Small program using Java's RMI (Remote Methode Invocation) to write a server/client multiplayer version of the popular game "Asteroids".
 
 ## How to run
-* Clone the repository and chmod + execute the ```run``` file.
+* Clone the repository, add exec rights (```chmod +x run```) and run with ```./run```.
 * Alternatively, start the RMI, Server and clients by cd'ing into the folder and running the following commands:
   * Compile Java: ```javac *.java```
   * RMI: ```rmiregistry &```

@@ -15,10 +15,10 @@ public class Rock implements Serializable {
     this.id = id;
 
     size = (short) (3 * Math.random() + 1); // [1 , 4]
-    radius = size * 20 + size * 10 * Math.random(); // [30 , 120]
+    radius = size * 30 + size * 20 * Math.random(); // [30 , 120]
     var angle = 360 * Math.random();
-    velX = Math.cos(Math.toRadians(angle));
-    velY = Math.sin(Math.toRadians(angle));
+    velX = 1/4.0 * Math.cos(Math.toRadians(angle));
+    velY = 1/4.0 * Math.sin(Math.toRadians(angle));
 
     boolean badPos = true;
 

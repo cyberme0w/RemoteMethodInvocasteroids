@@ -5,7 +5,7 @@ import java.util.HashMap;
 
 public interface Asteroids extends Remote {
   // Create elements
-  void createShip(int id) throws RemoteException;
+  void createShip(int id, String name) throws RemoteException;
   void newLaser(int id) throws RemoteException;
 
   // Move stuff around
@@ -36,8 +36,15 @@ public interface Asteroids extends Remote {
   double getVelYFromAngle(int id) throws RemoteException;
 
   void damageRock(int index, int shipID) throws RemoteException;
-
   void setLaserCountdown(int id, int i) throws RemoteException;
+  void killShip(int id) throws RemoteException;
+  void resetShip(int id, String name) throws RemoteException;
+
+  void removeLaser(int index) throws RemoteException;
+
+  void reset() throws RemoteException;
+
+  void setReady(int id, boolean b) throws RemoteException;
 
   // TODO: make meteors
   //void createMeteor(String name) throws RemoteException;

@@ -28,13 +28,13 @@ sleep 1
 
 # START SERVER
 echo "Starting rmi server..."
-java -Djava.rmi.server.hostname=192.168.0.9 -Djava.rmi.server.codebase="file:$PWD" AsteroidsServer &
+java -Djava.rmi.server.hostname=0.0.0.0 -Djava.rmi.server.codebase="file:$PWD" AsteroidsServer &
 
 sleep 1
 
 # START CLIENT 
 echo "Starting client..."
-java AsteroidsClient "192.168.0.9" "Rudolf"
+java AsteroidsClient "0.0.0.0" "user1"
 
 # TRAP SIGNAL TO STOP RMIREGISTRY
 trap SIGINT

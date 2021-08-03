@@ -2,8 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.util.ArrayList;
 
@@ -22,9 +21,10 @@ public class AsteroidsClient extends AnimatedJPanel {
   boolean leftPressed = false;
   boolean rightPressed = false;
   boolean spacePressed = false;
+  boolean readyPressed = false;
 
-  int mouseX;
-  int mouseY;
+  int mouseX = 0;
+  int mouseY = 0;
 
   double[] r1 = new double[40];
   double[] r2 = new double[40];
@@ -32,7 +32,16 @@ public class AsteroidsClient extends AnimatedJPanel {
   int rockCountdownMax = 90;
   int rockCountdown = rockCountdownMax;
 
-  AsteroidsClient(String host) {
+  int deathBlinkTimer = 0;
+  int deathBlinkTimerMax = 30;
+  boolean allDead = false;
+  boolean allReady = false;
+
+  boolean showDebugUI = false;
+
+
+  AsteroidsClient(String host, String name) {
+    String shipName = name.toLowerCase();
     id = (int) (Math.random() * 100000);
     setFocusable(true);
 
@@ -53,26 +62,25 @@ public class AsteroidsClient extends AnimatedJPanel {
         if (cur != null) {
 
           // Acceleration
-          if(upPressed) {
+          if(upPressed && cur.alive) {
             game.addVelFromAngle(id);
             if(cur.speed < cur.regSpeed) game.setSpeed(id, game.getSpeed(id) + 0.1);
           }
 
-          if(!upPressed && cur.speed > 0) {
-            game.setSpeed(id, game.getSpeed(id) - 0.05);
+          if((cur.alive && !upPressed && cur.speed > 0) || (!cur.alive && cur.speed > 0)) {
+            game.setSpeed(id, game.getSpeed(id) - 0.1);
           }
 
-          if(downPressed && cur.speed > 0) {
+          if(downPressed && cur.alive && cur.speed > 0) {
             game.setSpeed(id, game.getSpeed(id) - 0.2);
           }
 
           // Angle
-          // TODO: Change to momentum based movement (without setAngle, since we don't want to immediately change vel)
-          if(leftPressed) game.setAngle(id, (game.getAngle(id) + 10) % 360);
-          if(rightPressed) game.setAngle(id, (game.getAngle(id) - 10) % 360);
+          if(leftPressed && cur.alive) game.setAngle(id, (game.getAngle(id) + 10) % 360);
+          if(rightPressed && cur.alive) game.setAngle(id, (game.getAngle(id) - 10) % 360);
 
           // Boost
-          if(boostPressed && cur.speed < cur.maxSpeed) {
+          if(boostPressed && cur.alive && cur.speed < cur.maxSpeed) {
             game.addVelFromAngle(id);
             game.setSpeed(id, game.getSpeed(id) + 0.2);
           }
@@ -83,7 +91,7 @@ public class AsteroidsClient extends AnimatedJPanel {
           }
 
           // Shooting
-          if(spacePressed && cur.waitLaser == 0) {
+          if(spacePressed && cur.alive && cur.waitLaser == 0) {
             game.setLaserCountdown(id, cur.timerLaser);
             game.newLaser(id);
           }
@@ -111,12 +119,17 @@ public class AsteroidsClient extends AnimatedJPanel {
 
           // Check laser-rock collisions and remove destroyed rocks
           // only check the client's lasers, but check collisions with all rocks
-          for(Laser l : ls) {
+          var lasers = game.getLasers();
+          for(Laser l : lasers) {
             if(l.id == id) {
               var rocks = game.getRocks();
               for(Rock r : rocks) {
-                if(Math.abs(Math.sqrt(l.posX * l.posX - r.posX * r.posX + l.posY * l.posY + r.posY * r.posY)) < r.radius) {
+                double yDiff = Math.abs(l.posY - r.posY);
+                double xDiff = Math.abs(l.posX - r.posX);
+                double dist  = Math.sqrt(yDiff * yDiff + xDiff * xDiff);
+                if(dist <= r.radius) {
                   game.damageRock(rocks.indexOf(r), id);
+                  game.removeLaser(lasers.indexOf(l));
                   System.out.println("Laser touched rock!");
                 }
               }
@@ -125,15 +138,33 @@ public class AsteroidsClient extends AnimatedJPanel {
 
           // Check player-rock collisions
           for(Rock r : game.getRocks()) {
-            if(Math.hypot((cur.posX - r.posX), (cur.posY - r.posY)) < r.radius) {
-            //if(Math.sqrt(cur.posX * cur.posX - r.posX * r.posX + cur.posY * cur.posY + r.posY * r.posY) < r.radius) {
-              //game.damageShip(cur);
+            double yDiff = Math.abs(cur.posY - r.posY);
+            double xDiff = Math.abs(cur.posX - r.posX);
+            double dist  = Math.sqrt(yDiff * yDiff + xDiff * xDiff);
+            if(dist <= r.radius) {
+              game.killShip(id);
               System.out.println("Player touched rock!");
             }
           }
 
+          // Check if everyone is dead and/or ready to restart the match
+          allDead = true;
+          allReady = true;
+          for(Ship s : game.getShips().values()) {
+            if(s == null) break;
+            if(s.id == id && readyPressed) game.setReady(id, true);
+            if(s.alive) { allDead = false; }
+            if(!s.ready) { allReady = false; }
+          }
+
+          // DEBUG
+          if(showDebugUI && allDead) System.out.println("ALL DEAD");
+          if(showDebugUI && allReady) System.out.println("ALL READY");
+
           // Remove old, out-of-bounds lasers
-          // TODO: this needs improvement, not really nice to always redo the list
+          // 100 should be enough, but can be changed for more/less players -> my machine started struggling with 300
+          /* TODO: might be improvable by using a hashmap with randomized ids
+                   -> no more need to create an array every 30 miliseconds :D */
           if(ls.size() > 100) {
             var newLS = new ArrayList<Laser>();
             for(Laser l : ls) {
@@ -143,30 +174,32 @@ public class AsteroidsClient extends AnimatedJPanel {
             game.setLasers(newLS);
           }
 
-          // Update Rock countdown / create rock
-          var newRocks = new ArrayList<Rock>();
-          for(Rock r : game.getRocks()) if(r.size > 0) newRocks.add(r);
-          if(rockCountdown == 0 && game.getRocks().size() < MAX_ROCKS) {
-            newRocks.add(new Rock(this.id, game.getShips(), SCREEN_WIDTH, SCREEN_HEIGHT));
-            rockCountdown = rockCountdownMax;
-          }
 
-          game.setRocks(newRocks);
-          rockCountdown--;
+          if(allReady) {
+            // Update Rock countdown / create rock
+            var newRocks = new ArrayList<Rock>();
+            for(Rock r : game.getRocks()) if(r.size > 0) newRocks.add(r);
+            if(rockCountdown == 0 && game.getRocks().size() < MAX_ROCKS) {
+              newRocks.add(new Rock(this.id, game.getShips(), SCREEN_WIDTH, SCREEN_HEIGHT));
+              rockCountdown = rockCountdownMax;
+            }
+            game.setRocks(newRocks);
+            rockCountdown--;
 
-          // Update Rock Positions and loop around the border
-          var rs = game.getRocks();
-          for(Rock r : rs) {
-            // Move the rock and if needed loop around the screen
-            if(r.id == id) {
-              int index = rs.indexOf(r);
-              // loop
-              if(r.posX + r.radius > SCREEN_WIDTH + 40)       game.setRockPos(index,-40, r.posY);
-              else if(r.posX + r.radius < -40)                game.setRockPos(index, SCREEN_WIDTH + 40, r.posY);
-              else if(r.posY + r.radius > SCREEN_HEIGHT + 40) game.setRockPos(index, r.posX,   -40);
-              else if(r.posY + r.radius < -40)                game.setRockPos(index, r.posX, SCREEN_HEIGHT + 40);
-              // move
-              else game.moveRock(rs.indexOf(r));
+            // Update Rock Positions and loop around the border
+            var rs = game.getRocks();
+            for(Rock r : rs) {
+              // Move the rock and if needed loop around the screen
+              if(r.id == id) {
+                int index = rs.indexOf(r);
+                // loop
+                if(r.posX > SCREEN_WIDTH + r.radius)       game.setRockPos(index, -r.radius, r.posY);
+                else if(r.posX < -r.radius)                game.setRockPos(index, SCREEN_WIDTH + r.radius, r.posY);
+                else if(r.posY > SCREEN_HEIGHT + r.radius) game.setRockPos(index, r.posX,   -40);
+                else if(r.posY < -r.radius)                game.setRockPos(index, r.posX, SCREEN_HEIGHT + r.radius);
+                  // move
+                else game.moveRock(rs.indexOf(r));
+              }
             }
           }
         }
@@ -178,48 +211,34 @@ public class AsteroidsClient extends AnimatedJPanel {
 
     t.start();
 
-    addMouseListener(new MouseAdapter() {
-      public void mouseMoved(MouseEvent e) {
-        System.out.println("EVENT x: " + e.getX() + " y: " + e.getY());
-        System.out.println("VARS  x: " + mouseX + " y: " + mouseY);
-        System.out.println();
-        mouseX = e.getX();
-        mouseY = e.getY();
-      }
-      public void mouseClicked(MouseEvent e) {
-        try {
-          game.createShip(id);
-        } catch (Exception eMouse) { eMouse.printStackTrace(); }
-      }
-    });
-
     addKeyListener(new KeyAdapter() {
       public void keyReleased(KeyEvent e) {
-        try {
-          switch (e.getKeyCode()) {
-            case VK_S -> downPressed = false;
-            case VK_W -> upPressed = false;
-            case VK_A -> leftPressed = false;
-            case VK_D -> rightPressed = false;
-            case VK_SPACE -> spacePressed = false;
-            case VK_J -> boostPressed = false;
-          }
-        } catch (Exception eKeyReleased) { eKeyReleased.printStackTrace(); }
+        switch (e.getKeyCode()) {
+          case VK_S, VK_DOWN -> downPressed = false;
+          case VK_W, VK_UP -> upPressed = false;
+          case VK_A, VK_LEFT -> leftPressed = false;
+          case VK_D, VK_RIGHT -> rightPressed = false;
+          case VK_SPACE -> spacePressed = false;
+          case VK_J -> boostPressed = false;
+          case VK_R -> readyPressed = false;
+        }
       }
 
       public void keyPressed(KeyEvent e) {
-        try {
-          switch (e.getKeyCode()) {
-            case VK_S -> downPressed = true;
-            case VK_W -> upPressed = true;
-            case VK_A -> leftPressed = true;
-            case VK_D -> rightPressed = true;
-            case VK_J -> boostPressed = true;
-
-            // TODO: SHOOT
-            case VK_SPACE -> spacePressed = true;
-          }
-        } catch (Exception eKeyPressed) { eKeyPressed.printStackTrace(); }
+        switch (e.getKeyCode()) {
+          case VK_ENTER -> {
+            try{
+              if(allDead) game.reset();
+              else if(!allReady) {game.createShip(id, shipName);}
+            } catch (RemoteException ex) { ex.printStackTrace();}}
+          case VK_S -> downPressed = true;
+          case VK_W -> upPressed = true;
+          case VK_A -> leftPressed = true;
+          case VK_D -> rightPressed = true;
+          case VK_J -> boostPressed = true;
+          case VK_SPACE -> spacePressed = true;
+          case VK_R -> readyPressed = true;
+        }
       }
     });
   }
@@ -244,6 +263,15 @@ public class AsteroidsClient extends AnimatedJPanel {
         g.setColor(Color.GREEN);
         if(cur.id == this.id) g.setColor(Color.CYAN);
 
+        // change colors when dead
+        if(!cur.alive) {
+          if(deathBlinkTimer > deathBlinkTimerMax/2) {
+            g.setColor(Color.RED);
+          }
+          deathBlinkTimer = ((deathBlinkTimer+1) % deathBlinkTimerMax);
+        }
+
+        // some math for the ships shape
         double cos = Math.cos(Math.toRadians(cur.angle));
         double sin = Math.sin(Math.toRadians(cur.angle));
 
@@ -263,26 +291,24 @@ public class AsteroidsClient extends AnimatedJPanel {
 
         if(cur.id == this.id) {
           // UI Overlay
-          String uiPoints = "Points: " + cur.points;
-          String uiAngle = "Angle: " + cur.angle;
-          String uiVel = "Vel(x,y): " + cur.velX + ":" + cur.velY;
-          String uiSpeed = "Speed: " + cur.speed;
-          String uiLaser = "Laser(waitTime): " + cur.waitLaser;
-          String uiLaserCount = "Laser(count): " + game.getLasers().size();
-          String uiRockCount = "Rock(count): " + game.getRocks().size() + "/" + MAX_ROCKS;
-          String uiRockCD = "Rock(cd): " + (rockCountdownMax - rockCountdown) + "/" + rockCountdownMax;
-          String uiMousePos = "Mouse(x,y): " + mouseX + ":" + mouseY;
-
           g.setColor(Color.WHITE);
-          g.drawChars(uiPoints.toCharArray(), 0, uiPoints.length(), 100, 100);
-          g.drawChars(uiAngle.toCharArray(), 0, uiAngle.length(), 100, 120);
-          g.drawChars(uiVel.toCharArray(), 0, uiVel.length(), 100, 140);
-          g.drawChars(uiSpeed.toCharArray(), 0, uiSpeed.length(), 100, 160);
-          g.drawChars(uiLaser.toCharArray(), 0, uiLaser.length(), 100, 180);
-          g.drawChars(uiLaserCount.toCharArray(), 0, uiLaserCount.length(), 100, 200);
-          g.drawChars(uiRockCount.toCharArray(), 0, uiRockCount.length(), 100, 220);
-          g.drawChars(uiRockCD.toCharArray(), 0, uiRockCD.length(), 100, 240);
-          g.drawChars(uiMousePos.toCharArray(), 0, uiMousePos.length(), 100, 260);
+          if(showDebugUI) {
+            g.drawString("Points: " + cur.points, 100, 100);
+            g.drawString("Angle: " + cur.angle, 100, 120);
+            g.drawString("Vel(x,y): " + cur.velX + ":" + cur.velY, 100, 140);
+            g.drawString("Speed: " + cur.speed, 100, 160);
+            g.drawString("Laser(waitTime): " + cur.waitLaser, 100, 180);
+            g.drawString("Laser(count): " + game.getLasers().size(), 100, 200);
+            g.drawString("Rock(count): " + game.getRocks().size() + "/" + MAX_ROCKS, 100, 220);
+            g.drawString("Rock(cd): " + (rockCountdownMax - rockCountdown) + "/" + rockCountdownMax, 100, 240);
+            g.drawString("Mouse(x,y): " + mouseX + ":" + mouseY, 100, 260);
+          }
+          Ship bestShip = cur;
+          for(Ship s : game.getShips().values()) {
+            if(s.points > cur.points) bestShip = s;
+          }
+          g.drawString("Current top ship: " + bestShip.name + " with " + bestShip.points + " points", 100, 200);
+          g.drawString("     Your points: " + cur.points, 100, 220);
         }
       }
 
@@ -292,13 +318,6 @@ public class AsteroidsClient extends AnimatedJPanel {
 
         g.setColor(Color.RED);
         g.fillOval((int) l.posX, (int) l.posY, 5, 5);
-//        g.drawPolygon(new int[] {
-//                        (int) (l.posX),
-//                        (int) (l.posX + l.velX)},
-//                      new int[] {
-//                        (int) (l.posY),
-//                        (int) (l.posY + l.velY)},
-//                    3);
       }
 
       // Paint Rocks
@@ -309,11 +328,32 @@ public class AsteroidsClient extends AnimatedJPanel {
                    (int) r.radius,
                    (int) r.radius);
       }
+
+      // Paint Death Screen
+      Ship ship = game.getShips().get(id);
+      if(ship != null && !ship.alive) {
+        Ship bestShip = ship;
+        for(Ship s : game.getShips().values()) bestShip = s.points > bestShip.points ? s : bestShip;
+        g.setColor(Color.WHITE);
+        g.drawString("You died! Your score was " + ship.points, 500, 400);
+        g.drawString("The best score was " + bestShip.points + " by user:" + bestShip.name, 500, 420);
+
+        if(!allDead) g.drawString("Waiting for all players to die...", 500, 440);
+        else g.drawString("(press enter to restart)", 500, 460);
+      }
+
+      // Paint Waiting for Players to be ready screen
+      if(!allReady) {
+        g.setColor(Color.WHITE);
+        if(!game.getShips().get(id).ready) g.drawString("Press R when you are ready!", 500, 400);
+        else g.drawString("Waiting for all players to be ready...", 500, 400);
+      }
+
     } catch (Exception ePaint) { ePaint.printStackTrace(); }
   }
 
   public static void main(String[] args) {
-    var gameClient = new AsteroidsClient(args[0]);
+    var gameClient = new AsteroidsClient(args[0], args[1]);
     JFrame f = new JFrame();
     f.add(gameClient);
     f.setMinimumSize(new Dimension(gameClient.SCREEN_WIDTH, gameClient.SCREEN_HEIGHT));
