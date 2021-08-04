@@ -19,6 +19,8 @@ Small program using Java's RMI (Remote Methode Invocation) to write a server/cli
     * Client(s):`java AsteroidsClient 0.0.0.0 username` 
 
 ## How to play
+To start the game, or reset after everyone has died, press `enter`.
 Stay alive by dodging the asteroids or blowing them up with your lasers!
 Use A/D to turn the ship, W to accelerate and J to give yourself a speed boost.
 For each asteroid you destroy you will be awarded ```10/15/25/50``` points, based on its size (largest to smallest).
+The winner is the one with the most points once every player dies.
