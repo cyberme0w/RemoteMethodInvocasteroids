@@ -4,7 +4,7 @@ Small program using Java's RMI (Remote Methode Invocation) to write a server/cli
 ## How to run
 * Clone the repository
 * Windows: 
-  * `cd` into the repository and execute `runWindows.bat`.
+  * `cd` into the repository and execute `runWindows.bat` (Note: might not always work --> alt mode is reliable though).
   * Alternatively, start each step manually:
     * Compile: `javac *.java`
     * Registry: `start rmiregistry`
