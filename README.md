@@ -1,4 +1,4 @@
-# RMIProject
+# Remote Method InvocAsteroids
 Program using Java's RMI (Remote Methode Invocation) to write a server/client cross-platform multiplayer version of the popular game "Asteroids".
 It has currently been tested on Linux and Windows, but there should be no reason why it won't run on Apple devices.
 The program is divided in 3 major components:
